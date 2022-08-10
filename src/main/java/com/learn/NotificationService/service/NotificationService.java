@@ -11,6 +11,7 @@ import com.learn.NotificationService.repository.BlacklistRepository;
 import com.learn.NotificationService.repository.SmsRequestRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.exception.ExceptionUtils;
+import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -25,10 +26,15 @@ public class NotificationService {
 
     private final BlacklistRepository blacklistRepository;
 
+    private final KafkaTemplate<String, String> kafkaTemplate;
 
-    public NotificationService(SmsRequestRepository smsRequestRepository, BlacklistRepository blacklistRepository) {
+
+    public NotificationService(SmsRequestRepository smsRequestRepository,
+                               BlacklistRepository blacklistRepository,
+                               KafkaTemplate<String, String> kafkaTemplate) {
         this.smsRequestRepository = smsRequestRepository;
         this.blacklistRepository = blacklistRepository;
+        this.kafkaTemplate = kafkaTemplate;
     }
 
     public SmsResponse sendAndSaveSms(SmsRequest smsRequest){
@@ -37,6 +43,7 @@ public class NotificationService {
                 message(smsRequest.getMessage()).failureCode(1).failureComments("").phoneNumber(smsRequest.getPhoneNumber()).status(1).build());
         smsResponse.setComments(smsRequestDetails.getFailureComments());
         smsResponse.setRequestId(smsRequestDetails.getId());
+        kafkaTemplate.send("notification.send_sms", "lmao");
         return smsResponse;
     }
 
