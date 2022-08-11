@@ -43,7 +43,7 @@ public class NotificationService {
                 message(smsRequest.getMessage()).failureCode(1).failureComments("").phoneNumber(smsRequest.getPhoneNumber()).status(1).build());
         smsResponse.setComments(smsRequestDetails.getFailureComments());
         smsResponse.setRequestId(smsRequestDetails.getId());
-        kafkaTemplate.send("notification.send_sms", "lmao");
+        kafkaTemplate.send("notification.send_sms", smsRequestDetails.getId().toString());
         return smsResponse;
     }
 
