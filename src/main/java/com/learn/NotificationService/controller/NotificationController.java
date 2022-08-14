@@ -68,7 +68,7 @@ public class NotificationController {
         }
         return ResponseEntity.status(httpStatus).body(response);
     }
-
+    @Produces("application/json")
     @GetMapping("/blacklist")
     public ResponseEntity<BlacklistResponse> getBlacklistedNumbers() {
         BlacklistResponse blacklistResponse = new BlacklistResponse()
@@ -85,7 +85,8 @@ public class NotificationController {
         }
         return ResponseEntity.status(httpStatus).body(blacklistResponse);
     }
-
+    @Consumes("application/json")
+    @Produces("application/json")
     @DeleteMapping("/blacklist")
     public ResponseEntity<String> deleteNumbersFromBlacklist(@RequestBody BlacklistRequest blacklistRequest) {
         String response = "";
@@ -103,6 +104,7 @@ public class NotificationController {
         return ResponseEntity.status(httpStatus).body(response);
     }
 
+    //custom exception handling
     @GetMapping("/sms")
     public ResponseEntity<SmsRequestDetails> getSmsDetails(@RequestParam(value = "request_id") Integer orderId) {
         SmsRequestDetails smsRequestDetails = new SmsRequestDetails();

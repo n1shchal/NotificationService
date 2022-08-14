@@ -19,5 +19,6 @@ public class Blacklist {
     @Column(name = "id")
     Integer id;
 
+    //unique
     String phoneNumber;
 }
