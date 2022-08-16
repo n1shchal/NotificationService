@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 
 import javax.persistence.*;
 import java.sql.Timestamp;
+import java.util.Date;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -30,5 +31,9 @@ public class SmsRequestDetails {
     Integer failureCode;
 
     String failureComments;
+
+    Date createdAt ;
+
+    Date updatedAt;
 
 }
