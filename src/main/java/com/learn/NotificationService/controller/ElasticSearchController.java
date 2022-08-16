@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
-import java.sql.Date;
+import java.util.Date;
 import java.util.List;
 
 @Slf4j
@@ -32,8 +32,6 @@ public class ElasticSearchController {
         return  elasticSearchService.getByText(text);
     }
 
-    @Consumes("application/json")
-    @Produces("application/json")
     @GetMapping("/getByPhone")
     public List<ElasticSms> getByPhone(@RequestParam String phoneNumber,
                                        @RequestParam @DateTimeFormat(pattern="yyyy-MM-dd") Date from,

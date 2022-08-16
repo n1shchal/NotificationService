@@ -5,7 +5,7 @@ import com.learn.NotificationService.repository.ElasticSearchRepository;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.springframework.stereotype.Service;
 
-import java.sql.Date;
+import java.util.Date;
 import java.util.List;
 
 @Service
