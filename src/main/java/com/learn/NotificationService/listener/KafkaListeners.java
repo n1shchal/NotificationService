@@ -1,15 +1,15 @@
 package com.learn.NotificationService.listener;
 
-import com.learn.NotificationService.service.NotificationConsumerService;
+import com.learn.NotificationService.service.impl.NotificationConsumerServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class KafkaListeners {
-    private final NotificationConsumerService notificationConsumerService;
+    private final NotificationConsumerServiceImpl notificationConsumerService;
 
-    public KafkaListeners(NotificationConsumerService notificationConsumerService) {
+    public KafkaListeners(NotificationConsumerServiceImpl notificationConsumerService) {
         this.notificationConsumerService = notificationConsumerService;
     }
 

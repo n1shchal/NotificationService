@@ -1,7 +1,7 @@
 package com.learn.NotificationService.controller;
 
 import com.learn.NotificationService.model.ElasticSms;
-import com.learn.NotificationService.service.ElasticSearchService;
+import com.learn.NotificationService.service.impl.ElasticSearchServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Component;
@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.ws.rs.Consumes;
-import javax.ws.rs.Produces;
 import java.util.Date;
 import java.util.List;
 
@@ -21,9 +19,9 @@ import java.util.List;
 @RequestMapping("/v1/ES")
 public class ElasticSearchController {
 
-    private final ElasticSearchService elasticSearchService;
+    private final ElasticSearchServiceImpl elasticSearchService;
 
-    public ElasticSearchController(ElasticSearchService elasticSearchService) {
+    public ElasticSearchController(ElasticSearchServiceImpl elasticSearchService) {
         this.elasticSearchService = elasticSearchService;
     }
 
