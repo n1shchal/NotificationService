@@ -34,6 +34,8 @@ public class ElasticSearchController {
     public List<ElasticSms> getByPhone(@RequestParam String phoneNumber,
                                        @RequestParam @DateTimeFormat(pattern="yyyy-MM-dd") Date from,
                                        @RequestParam @DateTimeFormat(pattern="yyyy-MM-dd") Date to){
+
+        //add try and catch here
         return elasticSearchService.getByPhone(phoneNumber, from, to);
     }
 

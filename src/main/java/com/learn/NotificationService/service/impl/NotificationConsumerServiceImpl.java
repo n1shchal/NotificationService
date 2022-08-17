@@ -9,6 +9,7 @@ import com.learn.NotificationService.repository.RedisRepository;
 import com.learn.NotificationService.repository.SmsRequestRepository;
 import com.learn.NotificationService.service.NotificationConsumerService;
 import com.learn.NotificationService.service.NotificationService;
+import com.learn.NotificationService.utils.Enums;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.springframework.cache.annotation.Cacheable;
@@ -46,29 +47,25 @@ public class NotificationConsumerServiceImpl implements NotificationConsumerServ
         this.blacklistRepository = blacklistRepository;
     }
     @Override
-    @Cacheable("blacklist")
     public void consumeMessage(Integer request_id){
         SmsRequestDetails smsRequestDetails = notificationService.getSmsDetails(request_id);
         log.info("SMS to be delivered : {}", smsRequestDetails);
         Object imiResponse = new ImiResponse();
         if(!Objects.equals(redisRepository.check(smsRequestDetails.getPhoneNumber()),null)) {
-            log.info("the phone number {} is blacklisted", smsRequestDetails.getPhoneNumber());
-            smsRequestDetails.setFailureCode(1);
-            smsRequestDetails.setFailureComments("Blacklisted Number");
+            log.info("the phone number {} is blacklisted in redis", smsRequestDetails.getPhoneNumber());
+            smsRequestDetails.setFailureCode(Enums.PHONE_NUMBER_BLACKLISTED.value);
+            smsRequestDetails.setFailureComments(Enums.PHONE_NUMBER_BLACKLISTED.text);
         }
         else if(blacklistRepository.findBlacklistById(request_id)!=null){
             log.info("the phone number {} is blacklisted", smsRequestDetails.getPhoneNumber());
-            smsRequestDetails.setFailureCode(1);
-            smsRequestDetails.setFailureComments("Blacklisted Number");
         }
         else{
             try {
                 imiResponse = sendSmsNotification(smsRequestDetails);
-                smsRequestDetails.setFailureCode(0);
             } catch (Exception e) {
                 log.error("Sms Could not be delivered. Reason : {}", ExceptionUtils.getStackTrace(e));
-                smsRequestDetails.setFailureCode(2);
-                smsRequestDetails.setFailureComments(e.getMessage());
+                smsRequestDetails.setFailureCode(Enums.SEND_ERROR.value);
+                smsRequestDetails.setFailureComments(Enums.SEND_ERROR.text);
             }
             ElasticSms elasticSms = new ElasticSms(smsRequestDetails);
             log.info("elastic sms is: {}", elasticSms);

@@ -3,6 +3,7 @@ package com.learn.NotificationService.controller;
 import com.learn.NotificationService.model.*;
 import com.learn.NotificationService.model.entity.SmsRequestDetails;
 import com.learn.NotificationService.service.NotificationService;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.springframework.http.HttpStatus;
@@ -14,6 +15,8 @@ import org.springframework.web.client.HttpClientErrorException;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.Produces;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 
 @Slf4j
@@ -35,6 +38,11 @@ public class NotificationController {
         try {
             if(smsRequest.getPhoneNumber() == null || smsRequest.getMessage()== null)
                 throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Phone number or message missing");
+            Pattern phoneNumberPattern = Pattern.compile("^(\\+91[\\-\\s]?)?[0]?(91)?[789]\\d{9}$");
+            Matcher matcher = phoneNumberPattern.matcher(smsRequest.getPhoneNumber());
+            if(!matcher.matches()){
+                throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "Invalid Phone Number");
+            }
             log.info("sms request recieved : {}", smsRequest);
             smsResponse.setData(notificationService.sendAndSaveSms(smsRequest));
         } catch (BadRequestException |HttpClientErrorException e) {
@@ -66,6 +74,9 @@ public class NotificationController {
         } catch (BadRequestException | HttpClientErrorException e) {
             log.error("BadRequestException {}", ExceptionUtils.getStackTrace(e));
             httpStatus = HttpStatus.BAD_REQUEST;
+
+            //catch timeout (network connection error)
+
         } catch (Exception e) {
             log.error("Exception {}", ExceptionUtils.getStackTrace(e));
             httpStatus = HttpStatus.INTERNAL_SERVER_ERROR;
@@ -113,13 +124,13 @@ public class NotificationController {
     @Consumes("application/json")
     @Produces("application/json")
     @GetMapping("/sms")
-    public ResponseEntity<SmsDetailResponse> getSmsDetails(@RequestParam(value = "request_id") Integer orderId) {
+    public ResponseEntity<SmsDetailResponse> getSmsDetails(@RequestParam(value = "request_id") @NonNull Integer orderId) {
         SmsRequestDetails smsRequestDetails;
         SmsDetailResponse smsDetailResponse = new SmsDetailResponse();
         HttpStatus httpStatus = HttpStatus.OK;
         try {
-            if(orderId==null)
-                throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "OrderId is null");
+//            if(orderId==null)
+//                throw new HttpClientErrorException(HttpStatus.BAD_REQUEST, "OrderId is null");
             log.info("request recieved for order details for Order ID : {}", orderId);
             smsRequestDetails = notificationService.getSmsDetails(orderId);
             if(smsRequestDetails==null)

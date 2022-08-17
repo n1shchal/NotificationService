@@ -8,6 +8,7 @@ import com.learn.NotificationService.repository.BlacklistRepository;
 import com.learn.NotificationService.repository.RedisRepository;
 import com.learn.NotificationService.repository.SmsRequestRepository;
 import com.learn.NotificationService.service.NotificationService;
+import com.learn.NotificationService.utils.Enums;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.exception.ExceptionUtils;
 import org.springframework.kafka.core.KafkaTemplate;
@@ -46,15 +47,14 @@ public class NotificationServiceImpl implements NotificationService {
                 updatedAt(new Date()).
                 build();
         try {
-            smsRequestRepository.save(smsRequestDetails);
+            smsRequestDetails = smsRequestRepository.save(smsRequestDetails);
             kafkaTemplate.send("notification.send_sms", smsRequestDetails.getId().toString());
-            smsSuccess.setComments("message Queued");
+            smsSuccess.setComments(Enums.MESSAGE_QUEUED.text);
+            smsSuccess.setRequestId(smsRequestDetails.getId());
         }catch(Exception e){
             log.error("Could not save the  message request. Reason :{}", ExceptionUtils.getStackTrace(e));
             smsSuccess.setComments("message could Not be queued");
         }
-        smsRequestDetails= smsRequestRepository.findSmsRequestDetailsById(smsRequestDetails.getId());
-        smsSuccess.setRequestId(smsRequestDetails.getId());
         return smsSuccess;
     }
     @Override
@@ -64,15 +64,16 @@ public class NotificationServiceImpl implements NotificationService {
                 .map(p-> Blacklist.builder().phoneNumber(p).build()).collect(Collectors.toList());
         try {
             blacklistRepository.saveAll(blacklist);
+            for (String number : Optional.of(blacklistRequest).map(BlacklistRequest::getPhoneNumbersToBeBlacklisted).orElse(Collections.emptyList())) {
+                if(Objects.equals(redisRepository.check(number),null)) {
+                    redisRepository.addToBlacklist(number);
+                }
+            }
+            blacklistResponse.setData("Successfully Blacklisted");
         } catch (Exception e){
             log.error("Could not save. Reason :{}", ExceptionUtils.getStackTrace(e));
+            blacklistResponse.setData("Not Blacklisted");
         }
-        for (String number : Optional.of(blacklistRequest).map(BlacklistRequest::getPhoneNumbersToBeBlacklisted).orElse(Collections.emptyList())) {
-            if(Objects.equals(redisRepository.check(number),null)) {
-                redisRepository.addToBlacklist(number);
-            }
-        }
-        blacklistResponse.setData("Successfully Blacklisted");
         return blacklistResponse;
     }
     @Override
