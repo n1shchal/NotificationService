@@ -4,7 +4,9 @@ import com.learn.NotificationService.model.ElasticSms;
 import com.learn.NotificationService.model.Imi.ImiRequest;
 import com.learn.NotificationService.model.Imi.ImiResponse;
 import com.learn.NotificationService.model.entity.SmsRequestDetails;
+import com.learn.NotificationService.repository.BlacklistRepository;
 import com.learn.NotificationService.repository.RedisRepository;
+import com.learn.NotificationService.repository.SmsRequestRepository;
 import com.learn.NotificationService.service.NotificationConsumerService;
 import com.learn.NotificationService.service.NotificationService;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +29,21 @@ public class NotificationConsumerServiceImpl implements NotificationConsumerServ
 
     ElasticSearchServiceImpl elasticSearchService;
 
+    BlacklistRepository blacklistRepository;
+
+    SmsRequestRepository smsRequestRepository;
+
     public NotificationConsumerServiceImpl(NotificationService notificationService,
                                            RestTemplate restTemplate, RedisRepository redisRepository,
-                                           ElasticSearchServiceImpl elasticSearchService){
+                                           ElasticSearchServiceImpl elasticSearchService,
+                                           BlacklistRepository blacklistRepository,
+                                           SmsRequestRepository smsRequestRepository){
         this.notificationService = notificationService;
         this.restTemplate = restTemplate;
         this.redisRepository = redisRepository;
         this.elasticSearchService = elasticSearchService;
+        this.smsRequestRepository = smsRequestRepository;
+        this.blacklistRepository = blacklistRepository;
     }
     @Override
     @Cacheable("blacklist")
@@ -43,20 +53,31 @@ public class NotificationConsumerServiceImpl implements NotificationConsumerServ
         Object imiResponse = new ImiResponse();
         if(!Objects.equals(redisRepository.check(smsRequestDetails.getPhoneNumber()),null)) {
             log.info("the phone number {} is blacklisted", smsRequestDetails.getPhoneNumber());
+            smsRequestDetails.setFailureCode(1);
+            smsRequestDetails.setFailureComments("Blacklisted Number");
         }
-        else {
+        else if(blacklistRepository.findBlacklistById(request_id)!=null){
+            log.info("the phone number {} is blacklisted", smsRequestDetails.getPhoneNumber());
+            smsRequestDetails.setFailureCode(1);
+            smsRequestDetails.setFailureComments("Blacklisted Number");
+        }
+        else{
             try {
-                log.info("sending sms via third party api");
                 imiResponse = sendSmsNotification(smsRequestDetails);
+                smsRequestDetails.setFailureCode(0);
             } catch (Exception e) {
                 log.error("Sms Could not be delivered. Reason : {}", ExceptionUtils.getStackTrace(e));
+                smsRequestDetails.setFailureCode(2);
+                smsRequestDetails.setFailureComments(e.getMessage());
             }
             ElasticSms elasticSms = new ElasticSms(smsRequestDetails);
             log.info("elastic sms is: {}", elasticSms);
             elasticSearchService.save(elasticSms);
-
             log.info("got response from 3rd party api: {}", imiResponse);
         }
+        log.info("saving sms details :{}", smsRequestDetails);
+        smsRequestRepository.save(smsRequestDetails);
+
     }
 
     private Object sendSmsNotification(SmsRequestDetails smsRequestDetails) {

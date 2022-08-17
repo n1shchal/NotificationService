@@ -7,6 +7,5 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 @Repository
 public interface SmsRequestRepository extends JpaRepository<SmsRequestDetails, Integer> {
-
-    Optional<SmsRequestDetails> findById(Integer integer);
+    SmsRequestDetails findSmsRequestDetailsById(Integer id);
 }

@@ -1,18 +1,19 @@
 package com.learn.NotificationService.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
+import java.util.List;
+
 @Data
 @AllArgsConstructor
 @NoArgsConstructor
 @NonNull
-public class SmsResponse {
+@JsonIgnoreProperties(ignoreUnknown = true)
+public class BlacklistNumbersResponse {
 
-    SmsSuccess data;
-
-    SmsError error;
-
+    List<String> data;
 }

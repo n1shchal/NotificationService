@@ -1,6 +1,5 @@
 package com.learn.NotificationService.model;
 
-import com.learn.NotificationService.model.entity.SmsRequestDetails;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -8,8 +7,8 @@ import lombok.NoArgsConstructor;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
-public class SmsDetailResponse {
+public class SmsError {
 
-    SmsRequestDetails data;
-    SmsError error;
+    private String code;
+    private String message;
 }

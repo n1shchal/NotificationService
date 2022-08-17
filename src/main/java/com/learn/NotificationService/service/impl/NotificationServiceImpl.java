@@ -1,10 +1,7 @@
 package com.learn.NotificationService.service.impl;
 
 
-import com.learn.NotificationService.model.BlacklistRequest;
-import com.learn.NotificationService.model.BlacklistResponse;
-import com.learn.NotificationService.model.SmsRequest;
-import com.learn.NotificationService.model.SmsResponse;
+import com.learn.NotificationService.model.*;
 import com.learn.NotificationService.model.entity.Blacklist;
 import com.learn.NotificationService.model.entity.SmsRequestDetails;
 import com.learn.NotificationService.repository.BlacklistRepository;
@@ -18,6 +15,7 @@ import org.springframework.stereotype.Component;
 
 import javax.ws.rs.BadRequestException;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -39,67 +37,83 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public SmsResponse sendAndSaveSms(SmsRequest smsRequest) throws BadRequestException {
-        SmsResponse smsResponse = new SmsResponse();
-        //put save and kafka in try catch
-        SmsRequestDetails smsRequestDetails = smsRequestRepository.save(SmsRequestDetails.builder().
-                message(smsRequest.getMessage()).phoneNumber(smsRequest.getPhoneNumber()).createdAt(new Date()).updatedAt(new Date()).build());
-
-        kafkaTemplate.send("notification.send_sms", smsRequestDetails.getId().toString());
-        smsResponse.setComments(smsRequestDetails.getFailureComments());
-        smsResponse.setRequestId(smsRequestDetails.getId());
-        return smsResponse;
-    }
-    @Override
-    public String addNumbersToBlacklist(BlacklistRequest blacklistRequest) {
-
-        // add check if request is not null and list is not empty
-        //use batching to save (use saveAll)
-
-        for (String number : Optional.ofNullable(blacklistRequest).map(BlacklistRequest::getPhoneNumbersToBeBlacklisted).orElse(Collections.emptyList())) {
-            blacklistRepository.save(Blacklist.builder().phoneNumber(number).build());
-            log.info("the number {} is {} ", number, redisRepository.check(number));
-            redisRepository.addToBlacklist(number);
+    public SmsSuccess sendAndSaveSms(SmsRequest smsRequest) throws BadRequestException {
+        SmsSuccess smsSuccess = new SmsSuccess();
+        SmsRequestDetails smsRequestDetails = SmsRequestDetails.builder().
+                message(smsRequest.getMessage()).
+                phoneNumber(smsRequest.getPhoneNumber()).
+                createdAt(new Date()).
+                updatedAt(new Date()).
+                build();
+        try {
+            smsRequestRepository.save(smsRequestDetails);
+            kafkaTemplate.send("notification.send_sms", smsRequestDetails.getId().toString());
+            smsSuccess.setComments("message Queued");
+        }catch(Exception e){
+            log.error("Could not save the  message request. Reason :{}", ExceptionUtils.getStackTrace(e));
+            smsSuccess.setComments("message could Not be queued");
         }
-
-        //add these numbers to redis too
-
-
-        return "Successfully Blacklisted";
+        smsRequestDetails= smsRequestRepository.findSmsRequestDetailsById(smsRequestDetails.getId());
+        smsSuccess.setRequestId(smsRequestDetails.getId());
+        return smsSuccess;
     }
     @Override
-    public String deleteNumbersFromBlacklist(BlacklistRequest blacklistRequest) {
-        for (String number : Optional.ofNullable(blacklistRequest).map(BlacklistRequest::getPhoneNumbersToBeBlacklisted).orElse(Collections.emptyList()))
-            redisRepository.removeFromBlacklist(number);
-
-        blacklistRepository.deleteByPhoneNumberIn(blacklistRequest.getPhoneNumbersToBeBlacklisted());
-        return "Deleted Successfully";
-    }
-    @Override
-    public BlacklistResponse getBlacklistedNumbers() {
-        BlacklistResponse blacklistResponse = new BlacklistResponse();
-        List<String> blacklistedNumbers = new ArrayList<>();
-        List<Blacklist> blacklist = blacklistRepository.findAll();
-
-        // add null check and empty check on list
-        for (Blacklist blacklistedNumber : blacklist) {
-            blacklistedNumbers.add(blacklistedNumber.getPhoneNumber());
+    public BlacklistResponse addNumbersToBlacklist(BlacklistRequest blacklistRequest) {
+        BlacklistResponse blacklistResponse = new BlacklistResponse() ;
+        List<Blacklist> blacklist= blacklistRequest.getPhoneNumbersToBeBlacklisted().stream()
+                .map(p-> Blacklist.builder().phoneNumber(p).build()).collect(Collectors.toList());
+        try {
+            blacklistRepository.saveAll(blacklist);
+        } catch (Exception e){
+            log.error("Could not save. Reason :{}", ExceptionUtils.getStackTrace(e));
         }
-        blacklistResponse.setData(blacklistedNumbers);
+        for (String number : Optional.of(blacklistRequest).map(BlacklistRequest::getPhoneNumbersToBeBlacklisted).orElse(Collections.emptyList())) {
+            if(Objects.equals(redisRepository.check(number),null)) {
+                redisRepository.addToBlacklist(number);
+            }
+        }
+        blacklistResponse.setData("Successfully Blacklisted");
         return blacklistResponse;
     }
     @Override
+    public BlacklistResponse deleteNumbersFromBlacklist(BlacklistRequest blacklistRequest) {
+        BlacklistResponse blacklistResponse = new BlacklistResponse();
+        for (String number : Optional.ofNullable(blacklistRequest).map(BlacklistRequest::getPhoneNumbersToBeBlacklisted).orElse(Collections.emptyList()))
+            redisRepository.removeFromBlacklist(number);
+
+        if( blacklistRequest != null) {
+            try {
+                blacklistRepository.deleteByPhoneNumberIn(blacklistRequest.getPhoneNumbersToBeBlacklisted());
+            } catch(Exception e){
+                log.error("error deleting the phone numbers. Reason : {}", ExceptionUtils.getStackTrace(e));
+            }
+            blacklistResponse.setData("Successfully Whitelisted");
+        }
+        return blacklistResponse;
+    }
+    @Override
+    public BlacklistNumbersResponse getBlacklistedNumbers() {
+        BlacklistNumbersResponse blacklistNumbersResponse = new BlacklistNumbersResponse();
+        List<Blacklist> blacklist = new ArrayList<>();
+        try {
+            blacklist = blacklistRepository.findAll();
+        } catch(Exception e){
+            log.error("Error finding the blacklisted numbers. Reason: {}", ExceptionUtils.getStackTrace(e));
+        }
+        List<String> blacklistedNumbers = blacklist.stream().map(Blacklist::getPhoneNumber).collect(Collectors.toList());
+        blacklistNumbersResponse.setData(blacklistedNumbers);
+        return blacklistNumbersResponse;
+    }
+    @Override
     public SmsRequestDetails getSmsDetails(Integer requestId) {
-        Optional<SmsRequestDetails> smsRequestDetails = Optional.of(new SmsRequestDetails());
+        SmsRequestDetails smsRequestDetails = new SmsRequestDetails();
         log.info("getting sms details");
         try {
-            smsRequestDetails = smsRequestRepository.findById(requestId);
+            smsRequestDetails = smsRequestRepository.findSmsRequestDetailsById(requestId);
         } catch (Exception e) {
             log.error("error finding the sms : {}", ExceptionUtils.getStackTrace(e));
         }
-        //return 404 in case of not found
-        log.info("sms getails : {}", smsRequestDetails.get());
-        return smsRequestDetails.get();
+        return smsRequestDetails;
     }
 
 }

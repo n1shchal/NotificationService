@@ -9,10 +9,10 @@ import lombok.NonNull;
 @AllArgsConstructor
 @NoArgsConstructor
 @NonNull
-public class SmsResponse {
+public class SmsSuccess {
 
-    SmsSuccess data;
+    Integer requestId;
 
-    SmsError error;
+    String Comments;
 
 }
